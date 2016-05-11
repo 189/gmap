@@ -59,13 +59,7 @@ module.exports = {
                 inject: 'body',
                 template : 'amap.html',
                 chunks : ['amap']
-        }),
-		new HtmlWebpackPlugin({
-	            filename: 'scss.html',
-	            inject: 'body',
-	            template : 'scss.html',
-	            chunks : ['scss']
-	    })
+        })
 	    /*,
 	    new webpack.optimize.UglifyJsPlugin({
 	        compress: {

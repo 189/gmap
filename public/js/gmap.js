@@ -373,7 +373,7 @@ let publisher = new utils().makePublisher({
 
 	// icon 生成器 根据传入的 类型 返回对应类型的 icon 图标
 	makeIcon : (type)=>{
-		let iconPath = location.protocol + '//' + location.hostname + '/pack/public/css/';
+		let iconPath = location.protocol + '//' + location.hostname + '/gmap/public/images/';
 		let cfg = {
 			'michelin' : {
 				icon_url : iconPath + 'B.png'
