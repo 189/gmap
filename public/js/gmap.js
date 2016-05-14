@@ -2,7 +2,6 @@
 // 加载 JS 模块
 import $ from 'jquery';
 import {Utils as utils} from 'utils'; 
-import DATA from './data';
 import {formTemplate, loaderTemplate} from './templates';
 import 'jqueryui';
 
@@ -29,7 +28,8 @@ let [
 let mapBox = document.getElementById('map-wrap'), 
 	$mapBox = $(mapBox), 
 	$sider = $('#sidebar'),
-	infoSource = {};
+	infoSource = {},
+	latlngSource = {};
 
 // 引用谷歌地图导向 API
 let directionsDisplay = new google.maps.DirectionsRenderer;
@@ -66,7 +66,11 @@ let publisher = new utils().makePublisher({
 			if(target.tagName.toLowerCase() === 'input'){
 				let type = $(this).data('type'), check = this.checked;
 				if($(target).prop('checked')){
-					publisher.paint(type);
+					// 从后台查询点相关信息
+					publisher.fetch(type, function(data){
+						// 绘制点
+						this.paint(data, type);
+					}.bind(publisher));
 				}
 				else {
 					publisher.removeMarks(type);
@@ -76,57 +80,80 @@ let publisher = new utils().makePublisher({
 	},
 
 	// 绘制 根据中文地址 获取地点经纬度
-	paint : function(type){
-		let data = DATA[type], lnglat;
+	paint : function(data, type){
+		let lnglat;
+		// this.loading.show();
+
+		// let promises = data.map((v, i)=>{
+		// 	let promise = new Promise((resolve, reject) => {
+		// 		geocoder.geocode({ 'address': v['address'] }, (results, status) => {
+		// 		    if (status === google.maps.GeocoderStatus.OK) {
+		// 		        lnglat = results[0].geometry.location;
+		// 		        resolve({
+		// 		        	lnglat : lnglat, 
+		// 		        	content : v['name'],
+		// 		        	address : v['address'],
+		// 		        	place_id : results[0].place_id,
+		// 		        	link : v['link']
+		// 		        });
+		// 		    } else {
+		// 		        alert('地理位置解析失败(geocoder) 失败原因: ' + status);
+		// 		    }
+		// 		});
+		// 	})
+
+		// 	promise.then((data)=>{
+		// 		let link = data.link, name = data.content, lng = data.lnglat.lng(), lat = data.lnglat.lat(), address = data.address, id = data.place_id;
+		// 		let _address = decode(address);
+		// 		let infoTemplate = `
+		// 			<div class='info'>
+		// 				<h3>${name}</h3>
+		// 				<p>地点描述文字...<p>
+		// 				<p>${address}</p>
+		// 				<a href="${link}" target="_blank">查看详情</a>
+		// 				<a href="javascript:;" target="_blank">查看附近</a>
+		// 				<a href='javascript:;' id=${id} data-name=${name} data-lng=${lng} data-lat=${lat} data-_address=${_address} class="route">添加到行程</a>
+		// 			</div>`;
+		// 		this.makeMarks(data.lnglat, type, infoTemplate, id);
+		// 	})
+
+		// 	return promise;
+		// })
+
+		// // 视图自适应
+		// Promise.all(promises).then((post)=>{
+		// 	var bounds = new google.maps.LatLngBounds();
+		// 	POINTS = POINTS.concat(post);
+		// 	POINTS.map((v, i)=>{
+		// 		bounds.extend(v['lnglat']);
+		// 	})
+		// 	map.fitBounds(bounds);
+		// 	this.loading.hide();
+		// });
+		// 
 		
-		this.loading.show();
-
-		let promises = data.map((v, i)=>{
-			let promise = new Promise((resolve, reject) => {
-				geocoder.geocode({ 'address': v['address'] }, (results, status) => {
-				    if (status === google.maps.GeocoderStatus.OK) {
-				        lnglat = results[0].geometry.location;
-				        resolve({
-				        	lnglat : lnglat, 
-				        	content : v['name'],
-				        	address : v['address'],
-				        	place_id : results[0].place_id,
-				        	link : v['link']
-				        });
-				    } else {
-				        alert('地理位置解析失败(geocoder) 失败原因: ' + status);
-				    }
-				});
-			})
-
-			promise.then((data)=>{
-				let link = data.link, name = data.content, lng = data.lnglat.lng(), lat = data.lnglat.lat(), address = data.address, id = data.place_id;
-				let _address = decode(address);
-				let infoTemplate = `
-					<div class='info'>
-						<h3>${name}</h3>
-						<p>地点描述文字...<p>
-						<p>${address}</p>
-						<a href="${link}" target="_blank">查看详情</a>
-						<a href="javascript:;" target="_blank">查看附近</a>
-						<a href='javascript:;' id=${id} data-name=${name} data-lng=${lng} data-lat=${lat} data-_address=${_address} class="route">添加到行程</a>
-					</div>`;
-				this.makeMarks(data.lnglat, type, infoTemplate, id);
-			})
-
-			return promise;
+		data.forEach((v, i)=>{
+			let link = v.jump_url, name = v.cn_name, lng = v.lng, lat = v.lat, address = v.address, id = v.place_id;
+			let _address = decode(address), latlng = new google.maps.LatLng(lat, lng);
+			let infoTemplate = `
+				<div class='info'>
+					<h3>${name}</h3>
+					<p>地点描述文字...<p>
+					<p>${address}</p>
+					<a href="${link}" target="_blank">查看详情</a>
+					<a href="javascript:;" target="_blank">查看附近</a>
+					<a href='javascript:;' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
+				</div>`;
+			this.makeMarks(latlng, type, infoTemplate, id);
+			POINTS.push(latlng);
+			latlngSource[id] = latlng;
 		})
 
-		// 视图自适应
-		Promise.all(promises).then((post)=>{
-			var bounds = new google.maps.LatLngBounds();
-			POINTS = POINTS.concat(post);
-			POINTS.map((v, i)=>{
-				bounds.extend(v['lnglat']);
-			})
-			map.fitBounds(bounds);
-			this.loading.hide();
-		});
+		var bounds = new google.maps.LatLngBounds();
+		POINTS.map((v, i)=>{
+			bounds.extend(v);
+		})
+		map.fitBounds(bounds);
 	},
 
 	// 根据经纬度 标记类型 标记窗口的文本 生成点标记
@@ -244,25 +271,14 @@ let publisher = new utils().makePublisher({
 		let waypts = [];
 
 		if(count >= 2){
-			let start = {
-				lat : nodes.eq(0).data('lat'),
-				lng : nodes.eq(0).data('lng'),
-			};
-
-			let end = {
-				lat : nodes.eq(count - 1).data('lat'),
-				lng : nodes.eq(count - 1).data('lng')
-			};
-
+			let start = latlngSource[nodes.eq(0).data('id')];
+			let end = latlngSource[nodes.eq(count - 1).data('id')];
 			let points = nodes.slice(1, -1);
 
 			$.each(points, function(i, v){
 				waypts.push({
 					// 指定路径点的地址
-					location : {
-						lat : +this.getAttribute('data-lat'),
-						lng : +this.getAttribute('data-lng')
-					},  
+					location : latlngSource[v.getAttribute('data-id')], 
 					// 是否停靠
 					stopover : true 
 				});
@@ -301,6 +317,22 @@ let publisher = new utils().makePublisher({
 				drivePath.setMap(null);
 			}
 		}
+	},
+
+	// 获取数据
+	fetch : function(type, cb = function(){}){
+		$.when(
+			$.ajax({
+				url : 'http://api.yqqjp.com/index.php?c=data&a=list&type=' + type,
+				dataType : 'jsonp',
+				jsonp : 'cb'
+			})
+		)
+		.done(function(res){
+			if(res.code == 0){
+				cb(res.info);
+			}
+		})
 	},
 
 	// 绘制 折线
@@ -373,13 +405,14 @@ let publisher = new utils().makePublisher({
 
 	// icon 生成器 根据传入的 类型 返回对应类型的 icon 图标
 	makeIcon : (type)=>{
-		let iconPath = location.protocol + '//' + location.hostname + '/pack/public/css/';
+		let iconPath = location.protocol + '//' + location.hostname + '/gmap/public/images/';
 		let cfg = {
 			'michelin' : {
-				icon_url : iconPath + 'B.png'
+				// icon_url : iconPath + 'B.png'
+				icon_url : 'http://www.yqqjp.com/wp-content/uploads/2016/05/14630473371318.png'
 			},
 			'hotel' : {
-				icon_url : iconPath + 'A.png'
+				icon_url : 'http://www.yqqjp.com/wp-content/uploads/2016/05/14630473365439.png'
 			}
 		};
 		return cfg[type] ? cfg[type]['icon_url'] : iconPath + 'B.png';

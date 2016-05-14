@@ -6,14 +6,14 @@ var css_path = path.join(__dirname, 'public', 'css');
 var HtmlWebpackPlugin = require('html-webpack-plugin');
 var ExtractTextPlugin = require("extract-text-webpack-plugin");
 
+var evn = '';
+
 module.exports = {
 	entry : {
-		'gmap' : path.join(js_path, 'gmap'), 
-		'amap' : path.join(js_path, 'amap'),
-		'scss' : path.join(js_path, 'scss'),
+		'gmap' : path.join(js_path, 'gmap')
 	},
 	output : {
-		path : 'build',
+		path : evn == 'dev' ? 'build' : path.join('..', 'gmap'),
 		filename : "js/[name].min.js"
 	},
 	module : {
@@ -53,27 +53,6 @@ module.exports = {
 	            inject: 'body',
 	            template : 'gmap.html',
 	            chunks : ['gmap']
-	    }),
-    	new HtmlWebpackPlugin({
-                filename: 'amap.html',
-                inject: 'body',
-                template : 'amap.html',
-                chunks : ['amap']
-        }),
-		new HtmlWebpackPlugin({
-	            filename: 'scss.html',
-	            inject: 'body',
-	            template : 'scss.html',
-	            chunks : ['scss']
 	    })
-	    /*,
-	    new webpack.optimize.UglifyJsPlugin({
-	        compress: {
-	            warnings: false
-	        },
-	        mangle: {
-	            except: ['$super', '$', 'exports', 'require']
-	        }
-	    })*/
 	]
 };
