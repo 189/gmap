@@ -3,7 +3,7 @@ var formTemplate = `<form action="" class="panel hidden" id="panel">
 								<input type="checkbox" name="type[]" class="i-b">
 								<span class="i-b">酒店</span>
 							</label>
-							<label class='item fl' data-type='michelin'>
+							<label class='item fl' data-type='cate'>
 								<input type="checkbox" name="type[]" class="i-b">
 								<span class="i-b">米其林</span>
 							</label>

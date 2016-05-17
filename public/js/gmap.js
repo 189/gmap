@@ -11,14 +11,14 @@ import 'layout-css';
 // 变量初始化
 let [
 		CACHE, 
-		POINTS, 
+		MARKERS, // 存储 place id 跟 marks 的对应关系
 		map, 
 		encode, 
 		decode,
 		drivePath
 	] = [
 		{}, 
-		[], 
+		{}, 
 		null, 
 		encodeURIComponent, 
 		decodeURIComponent,
@@ -28,8 +28,8 @@ let [
 let mapBox = document.getElementById('map-wrap'), 
 	$mapBox = $(mapBox), 
 	$sider = $('#sidebar'),
-	infoSource = {},
-	latlngSource = {};
+	infoSource = {}, 	// 存储 place id 和信息窗口的对应关系 方便窗口管理如关闭
+	latlngSource = {}; 	// 存储 place id 和经纬度对象的对应关系 方便根据 place id 获取 经纬度
 
 // 引用谷歌地图导向 API
 let directionsDisplay = new google.maps.DirectionsRenderer;
@@ -66,6 +66,7 @@ let publisher = new utils().makePublisher({
 			if(target.tagName.toLowerCase() === 'input'){
 				let type = $(this).data('type'), check = this.checked;
 				if($(target).prop('checked')){
+					publisher.loading.show();
 					// 从后台查询点相关信息
 					publisher.fetch(type, function(data){
 						// 绘制点
@@ -80,77 +81,118 @@ let publisher = new utils().makePublisher({
 	},
 
 	// 绘制 根据中文地址 获取地点经纬度
+	// 后端返回的数据分2组处理: 
+	// 1/已经获得经纬度的点直接在地图上绘制
+	// 2/未获得经纬度的点由前端直接获取，之后再入库 单秒不能超过10次请求 每日不等超过2500次请求
 	paint : function(data, type){
-		let lnglat;
-		// this.loading.show();
+		var promises = [], rich = [], poor = [], pool = [], max = 0;
+		data.forEach((v, i)=>{
+			// 检测数据库中是否已经录入了地址经纬度
+			if(!v.place_id){
+				//promises.push(this.geocode(v));
+				poor.push(v);
+			}
+			else {
+				rich.push(v);
+			}
+		})
 
-		// let promises = data.map((v, i)=>{
-		// 	let promise = new Promise((resolve, reject) => {
-		// 		geocoder.geocode({ 'address': v['address'] }, (results, status) => {
-		// 		    if (status === google.maps.GeocoderStatus.OK) {
-		// 		        lnglat = results[0].geometry.location;
-		// 		        resolve({
-		// 		        	lnglat : lnglat, 
-		// 		        	content : v['name'],
-		// 		        	address : v['address'],
-		// 		        	place_id : results[0].place_id,
-		// 		        	link : v['link']
-		// 		        });
-		// 		    } else {
-		// 		        alert('地理位置解析失败(geocoder) 失败原因: ' + status);
-		// 		    }
+		rich.forEach((v, i)=>{
+			makeMarkersAndInfoHandler.call(publisher, v);
+		});
+
+		this.loading.hide();
+
+		traverse.call(publisher);
+		
+		// 部署 promise 对象，当且仅当后台没有录入地点经纬度的情况下 前台至谷歌 API 获取经纬度的所有请求完成时执行
+		// promises.length && Promise.all(promises).then((posts)=>{
+		// 	posts.forEach((v, i)=>{
+		// 		v.lat = v.lnglat.lat();
+		// 		v.lng = v.lnglat.lng();
+
+		// 		makeMarkersAndInfoHandler.call(publisher, v);
+				
+		// 		// 将通过geocode 获取的地点数据存入内部数据库
+		// 		this.put({
+		// 			lat : v.lat,
+		// 			lng : v.lng,
+		// 			type : v.type,
+		// 			place_id : v.place_id,
+		// 			id : v.id
 		// 		});
 		// 	})
-
-		// 	promise.then((data)=>{
-		// 		let link = data.link, name = data.content, lng = data.lnglat.lng(), lat = data.lnglat.lat(), address = data.address, id = data.place_id;
-		// 		let _address = decode(address);
-		// 		let infoTemplate = `
-		// 			<div class='info'>
-		// 				<h3>${name}</h3>
-		// 				<p>地点描述文字...<p>
-		// 				<p>${address}</p>
-		// 				<a href="${link}" target="_blank">查看详情</a>
-		// 				<a href="javascript:;" target="_blank">查看附近</a>
-		// 				<a href='javascript:;' id=${id} data-name=${name} data-lng=${lng} data-lat=${lat} data-_address=${_address} class="route">添加到行程</a>
-		// 			</div>`;
-		// 		this.makeMarks(data.lnglat, type, infoTemplate, id);
-		// 	})
-
-		// 	return promise;
+			
+		// 	if(poor.length){
+		// 		setTimeout(()=>{
+		// 			traverse.call(publisher);
+		// 		}, 1000)
+		// 	}
+		// 	else {
+		// 		let bounds = new google.maps.LatLngBounds();
+		// 		$.each(latlngSource, (i, v)=>{
+		// 			bounds.extend(v);
+		// 		})
+		// 		map.fitBounds(bounds);
+		// 		this.loading.hide();
+		// 	}
+		// }, (post)=>{
+		// 	this.loading.hide();
+		// 	poor.length && setTimeout(()=>{
+		// 		traverse.call(publisher);
+		// 	}, 1000)
+		// })
+		// .catch(function(err){
+		// 	console.log('promise err all--' + err);
 		// })
 
-		// // 视图自适应
-		// Promise.all(promises).then((post)=>{
-		// 	var bounds = new google.maps.LatLngBounds();
-		// 	POINTS = POINTS.concat(post);
-		// 	POINTS.map((v, i)=>{
-		// 		bounds.extend(v['lnglat']);
-		// 	})
-		// 	map.fitBounds(bounds);
-		// 	this.loading.hide();
-		// });
-		// 
-		
-		data.forEach((v, i)=>{
-			let link = v.jump_url, name = v.cn_name, lng = v.lng, lat = v.lat, address = v.address, id = v.place_id;
-			let _address = decode(address), latlng = new google.maps.LatLng(lat, lng);
-			let infoTemplate = `
+		function traverse(){
+			this.loading.show();
+			if(poor.length){
+				this.geocode(poor[0], (post) => {
+					makeMarkersAndInfoHandler.call(this, post);
+					this.put({
+						lat : post.lat,
+						lng : post.lng,
+						type : post.type,
+						place_id : post.place_id,
+						id : post.id
+					});
+					setTimeout(()=>{
+						traverse.call(this);
+						poor.shift();
+					}, 300)
+				}, ()=>{
+					setTimeout(()=>{
+						traverse.call(this);
+						poor.shift();
+					}, 300)
+				})
+			}
+			else {
+				this.loading.hide();
+			}
+
+		}
+
+		// 绘制
+		function makeMarkersAndInfoHandler(v){
+			var link = v.jump_url, name = v.cn_name, lng = v.lng, lat = v.lat, address = v.address, id = v.place_id;
+			var _address = decode(address), latlng = new google.maps.LatLng(lat, lng);
+			var infoTemplate = `
 				<div class='info'>
 					<h3>${name}</h3>
-					<p>地点描述文字...<p>
 					<p>${address}</p>
 					<a href="${link}" target="_blank">查看详情</a>
 					<a href="javascript:;" target="_blank">查看附近</a>
-					<a href='javascript:;' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
+					<a href='javascript:;' data-type='${type}' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
 				</div>`;
 			this.makeMarks(latlng, type, infoTemplate, id);
-			POINTS.push(latlng);
 			latlngSource[id] = latlng;
-		})
+		}
 
-		var bounds = new google.maps.LatLngBounds();
-		POINTS.map((v, i)=>{
+		let bounds = new google.maps.LatLngBounds();
+		$.each(latlngSource, (i, v)=>{
 			bounds.extend(v);
 		})
 		map.fitBounds(bounds);
@@ -161,10 +203,7 @@ let publisher = new utils().makePublisher({
 		let marker = new google.maps.Marker({
 			position : lnglat,
 			animation: google.maps.Animation.DROP,
-			icon : {
-				url : publisher.makeIcon(type),
-				scaledSize : new google.maps.Size(30, 30)
-			}
+			icon : publisher.makeIcon(type, 1)
 		})
 
 		// 缓存该类型的标记 用于之后的清除
@@ -182,11 +221,12 @@ let publisher = new utils().makePublisher({
 
 		infoSource[id] = infowindow;
 
-		infowindow.open(map, marker);
+		// infowindow.open(map, marker);
 		marker.addListener('click', ()=>{
 		    infowindow.open(map, marker);
 		});
 
+		MARKERS[id] = marker;
 	},
 
 	// 清除标记
@@ -215,17 +255,18 @@ let publisher = new utils().makePublisher({
 		var self = this;
 		$mapBox.on('click', '.route', function(){
 			let $this = $(this), lng = $this.data('lng'), lat = $this.data('lat'), name = $this.data('name'), _address = $this.data('_address');
+			let type = $this.data('type');
 			let count = $sider.find('.lines').length;
 			let id = $this.attr('id');
 			let html = count >= 1 ?
-						`<section class='lines' data-id=${id} data-lat=${lat} data-lng=${lng}>
+						`<section class='lines' data-type="${type}" data-id="${id}" data-lat="${lat}" data-lng="${lng}">
 							<div class="distance">距离:待测 自驾时长:待测</div>
 							<div class="spot">
 								<a href="javascript:;" class="delete">删除</a>
 								<h4>${name}</h4>
 							</div>
 						</section>` :
-						`<section class='lines' data-id=${id} data-lat=${lat} data-lng=${lng}>
+						`<section class='lines' data-type="${type}" data-id=${id} data-lat=${lat} data-lng=${lng}>
 							<div class="spot">
 								<a href="javascript:;" class="delete">删除</a>
 								<h4>${name}</h4>
@@ -307,7 +348,7 @@ let publisher = new utils().makePublisher({
 				        publisher.drawPath(response);
 
 				    } else {
-				        window.alert('Directions request failed due to ' + status);
+				        console.log('Directions request failed due to ' + status);
 				    }
 			});
 		}
@@ -334,6 +375,59 @@ let publisher = new utils().makePublisher({
 			}
 		})
 	},
+
+	// 更新数据库数据
+	put : function(opts){
+		let params = [
+			'type=' + opts.type, 
+			'id=' + opts.id, 
+			'place_id=' + opts.place_id, 
+			'lat=' +  opts.lat,
+			'lng=' + opts.lng
+		];
+
+		$.ajax({
+			url : 'http://api.yqqjp.com/index.php?c=data&a=editmap&' + params.join('&'),
+			type : 'get',
+			dataType : 'jsonp',
+			jsonp : 'cb'
+		})
+	},
+
+	// 地址编码
+	geocode : function(value, success = function(){}, failed = function(){}){
+		let promise = new Promise((resolve, reject) => {
+			geocoder.geocode({ 
+					'address': value['address'],
+					componentRestrictions : {
+						country : 'JP'
+					},
+					region : 'JP'
+				}, (results, status) => {
+				    if (status === google.maps.GeocoderStatus.OK) {
+				        var lnglat = results[0].geometry.location;
+				        resolve(Object.assign(value, {
+					        	lnglat : lnglat, 
+					        	lat : lnglat.lat(),
+					        	lng : lnglat.lng(),
+					        	place_id : results[0].place_id
+				        	})
+				        );
+				    } else {
+				        console.log('地理位置解析失败(geocoder) 失败原因: ' + status, value);
+				    	reject('reject');
+				    }
+				}
+			);
+		})
+
+		promise.then(
+			(post) => {success(post)},
+			(post) => {failed(post)}
+		)
+		return promise;
+	},
+
 
 	// 绘制 折线
 	drawPath : function(response){
@@ -387,8 +481,17 @@ let publisher = new utils().makePublisher({
 				$(this).removeClass('now');
 			}
 		})
+		.on('mouseenter', '.lines', function(){
+			let id = $(this).data('id'), type = $(this).data('type');
+			MARKERS[id].setAnimation(google.maps.Animation.BOUNCE);
+		})
+		.on('mouseleave', '.lines', function(){
+			let id = $(this).data('id'), type = $(this).data('type');
+			MARKERS[id].setAnimation(null);
+		})
 	},
 
+	// 拖放
 	sortable : function(){
 		$sider.sortable({
        		placeholder: "state-highlight",
@@ -403,19 +506,36 @@ let publisher = new utils().makePublisher({
 	},
 
 
-	// icon 生成器 根据传入的 类型 返回对应类型的 icon 图标
-	makeIcon : (type)=>{
-		let iconPath = location.protocol + '//' + location.hostname + '/gmap/public/images/';
-		let cfg = {
-			'michelin' : {
-				// icon_url : iconPath + 'B.png'
-				icon_url : 'http://www.yqqjp.com/wp-content/uploads/2016/05/14630473371318.png'
-			},
-			'hotel' : {
-				icon_url : 'http://www.yqqjp.com/wp-content/uploads/2016/05/14630473365439.png'
+	// icon 生成器 返回对应类型的 icon 配置
+	// type 类型 
+	// status 状态  1 选中状态 0 默认状态
+	makeIcon : (type, status)=>{
+		let xAxis = {'0' : 30, '1' : 0}, 
+			yAxis = {
+				'hotel' : 190,
+				'cate' : 152
+			};
+
+		return {
+			url : 'http://static.qyer.com/static/plan/new/project/web/plan/img/pin.png',
+			size : new google.maps.Size(30, 38),
+			origin : {
+				x : xAxis[status], 
+				y : yAxis[type]
 			}
 		};
-		return cfg[type] ? cfg[type]['icon_url'] : iconPath + 'B.png';
+	},
+
+	// 工具函数 用来等分数组
+	devide : (haystack, piece)=>{
+		var max = parseInt(haystack.length / piece);
+		var ret = [];
+		
+		for(var i = 0; i <= max; i++){
+			ret.push(haystack.splice(0, piece));
+		}
+
+		return ret;
 	}
 
 }, ['content', 'addToPanel', 'calculate', 'sideBarMannger', 'sortable']);

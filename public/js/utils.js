@@ -42,6 +42,17 @@ class Utils {
 		return child;
 	}
 
+	devide(haystack, piece) {
+		var max = parseInt(haystack.length / piece);
+		var ret = [];
+		
+		for(var i = 0; i <= max; i++){
+			ret.push(haystack.splice(0, piece));
+		}
+
+		return ret;
+	}
+
 }
 
 export {Utils};
