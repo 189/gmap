@@ -186,6 +186,11 @@ let publisher = new utils().makePublisher({
 					<p>${address}</p>
 					<a href="${link}" target="_blank">查看详情</a>
 					<a href='javascript:;' data-type='${type}' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
+					<a href="javascript:;" class='bug-fix'>纠错</a>
+					<form action="" class='none'>
+						<input type="text" id='adress' placeholder='谷歌地图地址' />
+						<input type="button" value='提交' id='fix-btn' />
+					</form>
 					<div class='nearby'>
 						<b>附近:</b> 
 						<a href='javascript:;' data-type='restaurant'>餐厅</a>
@@ -241,8 +246,14 @@ let publisher = new utils().makePublisher({
 		infoSource[id] = infowindow;
 
 		// infowindow.open(map, marker);
-		marker.addListener('click', ()=>{
+		marker.addListener('click', function(){
+			if(this.isShow == 1){
+				infowindow.close();
+				this.isShow = 0;
+				return;
+			}
 		    infowindow.open(map, marker);
+		    this.isShow = 1;
 		});
 
 		MARKERS[id] = marker;
@@ -606,6 +617,25 @@ let publisher = new utils().makePublisher({
 		})
 	},
 
+	// 地图纠错功能
+	positionFix : function(){
+		$mapBox.on('click', '.bug-fix', function(){
+			let $this = $(this);
+			$this.parent().find('form').show();
+		})
+		.on('click', '#fix-btn', function(e){
+			let $this = $(this), value = $this.prev().val();
+			if($.trim(value) == ''){
+				alert('地址不能为空');
+				return;
+			}
+
+			publisher.geocode({address : value}, (post)=>{
+				console.log(post);
+			});
+		})
+	},
+
 
 	// icon 生成器 返回对应类型的 icon 配置
 	// type 类型 
@@ -616,7 +646,6 @@ let publisher = new utils().makePublisher({
 				'hotel' : 190,
 				'cate' : 152
 			};
-
 		return {
 			url : 'http://static.qyer.com/static/plan/new/project/web/plan/img/pin.png',
 			size : new google.maps.Size(30, 38),
@@ -639,6 +668,6 @@ let publisher = new utils().makePublisher({
 		return ret;
 	}
 
-}, ['content', 'addToPanel', 'calculate', 'sideBarMannger', 'sortable']);
+}, ['content', 'addToPanel', 'calculate', 'sideBarMannger', 'sortable', 'positionFix']);
 
 publisher.init();
