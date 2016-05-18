@@ -178,18 +178,18 @@ let publisher = new utils().makePublisher({
 
 		// 绘制
 		function makeMarkersAndInfoHandler(v){
-			var link = v.jump_url, name = v.cn_name, lng = v.lng, lat = v.lat, address = v.address, id = v.place_id;
+			var link = v.jump_url, name = v.cn_name, uid = v.id, lng = v.lng, lat = v.lat, address = v.address, id = v.place_id;
 			var _address = decode(address), latlng = new google.maps.LatLng(lat, lng);
 			var infoTemplate = `
 				<div class='info'>
 					<h3>${name}</h3>
 					<p>${address}</p>
 					<a href="${link}" target="_blank">查看详情</a>
-					<a href='javascript:;' data-type='${type}' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
+					<a href='javascript:;' data-uid='${uid}' data-type='${type}' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
 					<a href="javascript:;" class='bug-fix'>纠错</a>
 					<form action="" class='none'>
 						<input type="text" id='adress' placeholder='谷歌地图地址' />
-						<input type="button" value='提交' id='fix-btn' />
+						<input type="button" value='这波我头很硬' id='fix-btn' />
 					</form>
 					<div class='nearby'>
 						<b>附近:</b> 
@@ -489,7 +489,7 @@ let publisher = new utils().makePublisher({
 	},
 
 	// 更新数据库数据
-	put : function(opts){
+	put : function(opts, cb = function(){}){
 		let params = [
 			'type=' + opts.type, 
 			'id=' + opts.id, 
@@ -503,6 +503,14 @@ let publisher = new utils().makePublisher({
 			type : 'get',
 			dataType : 'jsonp',
 			jsonp : 'cb'
+		})
+		.done(function(res){
+			if(res.code == 0){
+				cb(res);
+			}
+			else {
+				console.log(res.msg);
+			}
 		})
 	},
 
@@ -624,14 +632,71 @@ let publisher = new utils().makePublisher({
 			$this.parent().find('form').show();
 		})
 		.on('click', '#fix-btn', function(e){
-			let $this = $(this), value = $this.prev().val();
+			let $this = $(this), value = $this.prev().val(), $hook = $this.closest('.info').find('.route');
+			let {lat, lng, name, type, uid} = $hook.data(), id = $hook.attr('id');
+
 			if($.trim(value) == ''){
 				alert('地址不能为空');
 				return;
 			}
-
+			// 查询指定地址 用以更新 mark 坐标
 			publisher.geocode({address : value}, (post)=>{
-				console.log(post);
+				let [_lat, _lng, _place_id] = [post.lat, post.lng, post.place_id]
+				let message = 
+							[
+								`查询${name}获得数据如下:`,
+								`经度(新)${_lng}`,
+								`经度(老)${lng}`,
+								`纬度(新)${_lat}`,
+								`维度(老)${lat}`,
+								`place_id(新)${_place_id}`,
+								`place_id(老)${id}`,
+								`是否更新？`
+							].join('\n');
+
+				if(confirm(message)){
+					publisher.put(
+						{
+							'type' : type, 
+							'id' : uid, 
+							'place_id' : _place_id, 
+							'lat' :  _lat,
+							'lng' : _lng
+						},
+						(res)=>{
+							alert('坐标更新成功');
+							// 更新 DOM 节点属性
+							$hook.data({
+								lat : _lat,
+								lng : _lng
+							})
+							$hook.attr('id', _place_id);
+							
+							// 更新 MARKERS
+							MARKERS[_place_id] = MARKERS[id];
+							// 重新定位 marker
+							MARKERS[_place_id].setPosition({
+								lat : _lat,
+								lng : _lng
+							});
+							
+							// 更新信息窗口
+							infoSource[_place_id] = infoSource[id];
+							// 重新定位 信息窗口
+							infoSource[_place_id].setMap(map, MARKERS[_place_id]);
+							
+							// 更新经纬度缓存
+							latlngSource[_place_id] = google.maps.LatLng(lat, lng);
+
+							// 更新右侧面板 place_id 属性
+							$('.lines[data-id="' + id + '"]', $sider).data('id', _place_id);
+
+							delete MARKERS[id];
+							delete infoSource[id];
+							delete latlngSource[id];
+						}
+					);
+				}
 			});
 		})
 	},
