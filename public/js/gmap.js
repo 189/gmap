@@ -34,7 +34,7 @@ let mapBox = document.getElementById('map-wrap'),
 // 引用谷歌地图导向 API
 let directionsDisplay = new google.maps.DirectionsRenderer;
 let directionsService = new google.maps.DirectionsService();
-let geocoder = new google.maps.Geocoder();
+let geocoder = new google.maps.Geocoder(), service;
 
 let publisher = new utils().makePublisher({
 	// 内容初始化
@@ -54,7 +54,8 @@ let publisher = new utils().makePublisher({
 
 		// 在地图上布局表单
 		map.controls[google.maps.ControlPosition.TOP_LEFT].push(form);
-
+		// 启用谷歌地点服务 API
+		service = new google.maps.places.PlacesService(map);
 		// 注册表单事件
 		this.formLister();
 	},
@@ -184,10 +185,25 @@ let publisher = new utils().makePublisher({
 					<h3>${name}</h3>
 					<p>${address}</p>
 					<a href="${link}" target="_blank">查看详情</a>
-					<a href="javascript:;" target="_blank">查看附近</a>
 					<a href='javascript:;' data-type='${type}' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
+					<div class='nearby'>
+						<b>附近:</b> 
+						<a href='javascript:;' data-type='restaurant'>餐厅</a>
+						<a href='javascript:;' data-type='subway_station'>地铁站</a>
+						<a href='javascript:;' data-type='bank'>银行</a>
+						<a href='javascript:;' data-type='atm'>ATM</a>
+						<a href='javascript:;' data-type='shopping_mall'>商场</a>
+						<a href='javascript:;' data-type='hospital'>医院</a>
+						<a href='javascript:;' data-type='parking'>停车场</a>
+						<a href='javascript:;' data-type='airport'>机场</a>
+					</div>
 				</div>`;
-			this.makeMarks(latlng, type, infoTemplate, id);
+			this.makeMarks({
+				latlng : latlng, 
+				type : type, 
+				content : infoTemplate, 
+				id : id
+			});
 			latlngSource[id] = latlng;
 		}
 
@@ -199,12 +215,15 @@ let publisher = new utils().makePublisher({
 	},
 
 	// 根据经纬度 标记类型 标记窗口的文本 生成点标记
-	makeMarks : (lnglat, type, content, id)=> {
+	makeMarks : (opts)=> {
 		let marker = new google.maps.Marker({
-			position : lnglat,
+			position : opts.latlng,
 			animation: google.maps.Animation.DROP,
-			icon : publisher.makeIcon(type, 1)
-		})
+			icon : opts.icon || publisher.makeIcon(opts.type, 1)
+		}),
+		type = opts.type, 
+		content = opts.content,
+		id = opts.id;
 
 		// 缓存该类型的标记 用于之后的清除
 		if(!CACHE[type]){
@@ -227,6 +246,8 @@ let publisher = new utils().makePublisher({
 		});
 
 		MARKERS[id] = marker;
+
+		return marker;
 	},
 
 	// 清除标记
@@ -253,6 +274,7 @@ let publisher = new utils().makePublisher({
 	// 添加到行程 将地点添加到行程面板
 	addToPanel : function(){
 		var self = this;
+		// 添加到行程
 		$mapBox.on('click', '.route', function(){
 			let $this = $(this), lng = $this.data('lng'), lat = $this.data('lat'), name = $this.data('name'), _address = $this.data('_address');
 			let type = $this.data('type');
@@ -294,6 +316,85 @@ let publisher = new utils().makePublisher({
 			// $sider.append(html);
 
 			infoSource[id].close();
+		})
+		// 查看附件
+		.on('click', '.nearby a', function(){
+			let $this = $(this), type = $this.data('type'), text = $this.html(), id = $this.closest('.info').find('.route').attr('id');
+			let bounds = new google.maps.LatLngBounds();
+			let info = infoSource[id];
+			let radius = 2000, position = info.getPosition();
+
+			publisher.loading.show();
+			
+			service.nearbySearch(
+				{
+					location : position,
+					radius : radius,
+					types : [ type ]
+				},
+				(results, status, pagination)=>{
+					if(status !== google.maps.places.PlacesServiceStatus.OK){
+						alert(`附近${radius}米查无${text}数据`);
+					}
+					else {
+						results.forEach((place, i)=>{
+							// publisher.makeMarks({
+							// 	latlng : place.geometry.location,
+							// 	id : place.place_id,
+							// 	content : place.name,
+							// 	icon : {
+							// 		url : place.icon.replace('https', 'http').replace('.com', '.cn'),
+							// 		scaledSize : new google.maps.Size(15, 15)
+							// 	}
+							// });
+							var marker = new google.maps.Marker({
+								position : place.geometry.location,
+								animation: google.maps.Animation.DROP,
+								icon : {
+									url : place.icon.replace('https', 'http').replace('.com', '.cn'),
+									scaledSize : new google.maps.Size(15, 15)
+								}
+							});
+
+							marker.setMap(map);
+							
+							bounds.extend(place.geometry.location);
+
+							google.maps.event.addListener(marker, 'click', function() {
+					           	service.getDetails({
+					           	    placeId: place.place_id
+					           	}, function(place, status) {
+					           	    if (status === google.maps.places.PlacesServiceStatus.OK) {
+					           	    	let info = new google.maps.InfoWindow(),
+					           	    		name = place.name,
+					           	    		address = place.formatted_address,
+					           	    		tel = place.international_phone_number,
+					           	    		rate = place.rating,
+					           	    		url = place.url,
+					           	    		website = place.website;
+					           	    	let html = `<div class='info'>
+														<h3>${name}</h3>
+														<p>地址: ${address}</p>
+														<p>电话: ${tel}</p>
+														<p>评分: ${rate}</p>
+														<a href="${url}" target="_blank">查看详情</a>
+														<a href="${website}" target="_blank">查看官网</a>
+													</div>`;
+										info.setContent(html);
+										info.open(map, marker);
+
+					           	    }
+					           	}); 
+					        });
+
+						})
+
+						map.fitBounds(bounds);
+					}
+					publisher.loading.hide();
+
+				}
+			);
 		})
 	},
 
@@ -399,10 +500,10 @@ let publisher = new utils().makePublisher({
 		let promise = new Promise((resolve, reject) => {
 			geocoder.geocode({ 
 					'address': value['address'],
-					componentRestrictions : {
+					'componentRestrictions' : {
 						country : 'JP'
 					},
-					region : 'JP'
+					'region' : 'JP'
 				}, (results, status) => {
 				    if (status === google.maps.GeocoderStatus.OK) {
 				        var lnglat = results[0].geometry.location;

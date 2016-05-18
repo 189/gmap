@@ -26,10 +26,11 @@ a,a:hover,a:visited { color: #000; text-decoration: underline;  }
 .hidden { overflow: hidden; }
 
 .map-wrap { height: 100%; margin-right: 255px; }
+.map-wrap p { margin: 5px 0; }
 
 .sidebar-box { float: right; width: 250px; height: 100%; padding: 0 0 10px; overflow: auto; }
 .sidebar-box h3 { margin-left: 10px; padding: 10px 0; }
-.sidebar-box h3 a { margin-right: 10px;  }
+.sidebar-box h3 a { margin-right: 10px; }
 .sidebar-box .lines { background-color: #fff; box-shadow: 1px 1px 1px rgba(0, 0, 0, .3); margin-bottom: 10px; }
 .sidebar-box .lines.now { background-color: rgba(250, 158, 37, 0.15); }
 .sidebar-box .lines.now .distance { background-image: none; color: #ccc; }
@@ -42,6 +43,8 @@ a,a:hover,a:visited { color: #000; text-decoration: underline;  }
 .panel span { margin:0 2px; }
 .panel label { padding: 8px; -webkit-background-clip: padding-box;  min-width: 24px; font-weight: 500;   }
 .panel label:hover { background-color: rgb(235, 235, 235); }
+
+.nearby { margin-top: 10px;  }
 
 .state-highlight { background-color: rgba(220, 20, 20, .1); height: 40px; }
 
