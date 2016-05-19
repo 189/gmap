@@ -105,47 +105,6 @@ let publisher = new utils().makePublisher({
 		this.loading.hide();
 
 		traverse.call(publisher);
-		
-		// 部署 promise 对象，当且仅当后台没有录入地点经纬度的情况下 前台至谷歌 API 获取经纬度的所有请求完成时执行
-		// promises.length && Promise.all(promises).then((posts)=>{
-		// 	posts.forEach((v, i)=>{
-		// 		v.lat = v.lnglat.lat();
-		// 		v.lng = v.lnglat.lng();
-
-		// 		makeMarkersAndInfoHandler.call(publisher, v);
-				
-		// 		// 将通过geocode 获取的地点数据存入内部数据库
-		// 		this.put({
-		// 			lat : v.lat,
-		// 			lng : v.lng,
-		// 			type : v.type,
-		// 			place_id : v.place_id,
-		// 			id : v.id
-		// 		});
-		// 	})
-			
-		// 	if(poor.length){
-		// 		setTimeout(()=>{
-		// 			traverse.call(publisher);
-		// 		}, 1000)
-		// 	}
-		// 	else {
-		// 		let bounds = new google.maps.LatLngBounds();
-		// 		$.each(latlngSource, (i, v)=>{
-		// 			bounds.extend(v);
-		// 		})
-		// 		map.fitBounds(bounds);
-		// 		this.loading.hide();
-		// 	}
-		// }, (post)=>{
-		// 	this.loading.hide();
-		// 	poor.length && setTimeout(()=>{
-		// 		traverse.call(publisher);
-		// 	}, 1000)
-		// })
-		// .catch(function(err){
-		// 	console.log('promise err all--' + err);
-		// })
 
 		function traverse(){
 			this.loading.show();
@@ -189,7 +148,7 @@ let publisher = new utils().makePublisher({
 					<a href="javascript:;" class='bug-fix'>纠错</a>
 					<form action="" class='none'>
 						<input type="text" id='adress' placeholder='谷歌地图地址' />
-						<input type="button" value='这波我头很硬' id='fix-btn' />
+						<button id='fix-btn'>这波头很硬</button>
 					</form>
 					<div class='nearby'>
 						<b>附近:</b> 
@@ -627,11 +586,12 @@ let publisher = new utils().makePublisher({
 
 	// 地图纠错功能
 	positionFix : function(){
-		$mapBox.on('click', '.bug-fix', function(){
+		$mapBox.on('click', '.bug-fix', function(e){
 			let $this = $(this);
 			$this.parent().find('form').show();
 		})
 		.on('click', '#fix-btn', function(e){
+			e.preventDefault();
 			let $this = $(this), value = $this.prev().val(), $hook = $this.closest('.info').find('.route');
 			let {lat, lng, name, type, uid} = $hook.data(), id = $hook.attr('id');
 
@@ -655,6 +615,11 @@ let publisher = new utils().makePublisher({
 							].join('\n');
 
 				if(confirm(message)){
+					if(_place_id == id){
+						alert('新老坐标都一样,更新个溜溜球呢');
+						return;
+					}
+
 					publisher.put(
 						{
 							'type' : type, 
