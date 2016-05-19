@@ -151,7 +151,7 @@ let publisher = new utils().makePublisher({
 						<button id='fix-btn'>这波头很硬</button>
 						<button class='drag-btn'>激活拖放纠正</button>
 					</form>
-					<div class='nearby'>
+					<div class='nearby none'>
 						<b>附近:</b> 
 						<a href='javascript:;' data-type='restaurant'>餐厅</a>
 						<a href='javascript:;' data-type='subway_station'>地铁站</a>
@@ -167,7 +167,10 @@ let publisher = new utils().makePublisher({
 				latlng : latlng, 
 				type : type, 
 				content : infoTemplate, 
-				id : id
+				id : id,
+				name : name,
+				address : address,
+				link : link
 			});
 			latlngSource[id] = latlng;
 		}
@@ -195,28 +198,43 @@ let publisher = new utils().makePublisher({
 			CACHE[type] = [];
 		}
 
-		CACHE[type].push(marker);
+		// 若MARKERS[id]已经缓存过说明至少有一个同 place_id 的点已经存在
+		// 且经纬度完全一致
+		if(MARKERS[id] && latlngSource[id].lat() == opts.latlng.lat() && latlngSource[id].lng() == opts.latlng.lng()){
+			// 追加 infowindow 内容
+			let html = `
+				<div class='info'>
+					<h3>${opts.name}</h3>
+					<p>${opts.address}</p>
+					<a href="${opts.link}" target="_blank">查看详情</a>
+				</div>`;
+			let cont = infoSource[id].getContent() + html;
+			infoSource[id].setContent(cont);
 
-		marker.setMap(map);
-		
-		let infowindow = new google.maps.InfoWindow({
-		    content: content
-		});
+		}
+		else {
+			MARKERS[id] = marker;
+			CACHE[type].push(marker);
 
-		infoSource[id] = infowindow;
+			marker.setMap(map);
+			
+			let infowindow = new google.maps.InfoWindow({
+			    content: content
+			});
 
-		// infowindow.open(map, marker);
-		marker.addListener('click', function(){
-			if(this.isShow == 1){
-				infowindow.close();
-				this.isShow = 0;
-				return;
-			}
-		    infowindow.open(map, marker);
-		    this.isShow = 1;
-		});
+			infoSource[id] = infowindow;
 
-		MARKERS[id] = marker;
+			// infowindow.open(map, marker);
+			marker.addListener('click', function(){
+				if(this.isShow == 1){
+					infowindow.close();
+					this.isShow = 0;
+					return;
+				}
+			    infowindow.open(map, marker);
+			    this.isShow = 1;
+			});
+		}
 
 		return marker;
 	},

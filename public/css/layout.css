@@ -28,6 +28,7 @@ a,a:hover,a:visited { color: #000; text-decoration: underline;  }
 
 .map-wrap { height: 100%; margin-right: 255px; }
 .map-wrap p { margin: 5px 0; }
+.map-wrap .info { margin-bottom: 5px; margin-top: 5px; }
 .map-wrap .info form { margin: 5px 0; }
 .map-wrap .info form input[type=text] { width: 150px; box-sizing: border-box; padding: 3px;  }
 .map-wrap .info form input { outline: none; padding-left: 2px;  }
