@@ -149,6 +149,7 @@ let publisher = new utils().makePublisher({
 					<form action="" class='none'>
 						<input type="text" id='adress' placeholder='谷歌地图地址' />
 						<button id='fix-btn'>这波头很硬</button>
+						<button class='drag-btn'>激活拖放纠正</button>
 					</form>
 					<div class='nearby'>
 						<b>附近:</b> 
@@ -663,6 +664,65 @@ let publisher = new utils().makePublisher({
 					);
 				}
 			});
+		})
+
+		// 激活拖放事件
+		.on('click', '.drag-btn', function(e){
+			e.preventDefault();
+			let $this = $(this), value = $this.prev().val(), $hook = $this.closest('.info').find('.route');
+			let {lat, lng, name, type, uid} = $hook.data(), id = $hook.attr('id');
+			let marker = MARKERS[id];
+
+			// 激活拖放
+			if(!$this.data('dragable') ){
+				marker.setDraggable(true);
+				marker.setCursor('move');
+				marker.setIcon(publisher.makeIcon(type, 0));
+				$this.html('用这个点更新数据');
+				$this.data('dragable', 1);
+			}
+			// 关闭拖放提交数据
+			else {
+				let position = marker.getPosition(), _lat = position.lat(), _lng = position.lng();
+				let message = [
+					`查询${name}获得数据如下:`,
+					`经度(新)${_lng}`,
+					`经度(老)${lng}`,
+					`纬度(新)${_lat}`,
+					`维度(老)${lat}`,
+					`是否更新？`
+				].join('\n');
+
+				// 确认更新数据
+				if(confirm(message)){
+					// 提交数据
+					publisher.put(
+						{
+							'type' : type, 
+							'id' : uid, 
+							'place_id' : id, 
+							'lat' :  _lat,
+							'lng' : _lng
+						},
+						(res)=>{
+							alert('坐标更新成功');
+							// 更新 DOM 节点属性
+							$hook.data({
+								lat : _lat,
+								lng : _lng
+							})
+							// 更新经纬度缓存
+							latlngSource[id] = google.maps.LatLng(_lat, _lng);
+							// 更新页面状态
+							$this.data('dragable', 0);
+							marker.setDraggable(false);
+							marker.setCursor('pointer');
+							marker.setIcon(publisher.makeIcon(type, 1));
+							$this.html('激活拖放纠正');
+						}
+					);
+				}
+			}
 		})
 	},
 
