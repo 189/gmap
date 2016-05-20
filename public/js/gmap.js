@@ -10,14 +10,21 @@ import 'layout-css';
 
 // 变量初始化
 let [
-		CACHE, 
-		MARKERS, // 存储 place id 跟 marks 的对应关系
+		/**
+		 * 按类型 存储 place id 跟 marks 的对应关系 如
+		 * {
+		 * 	  hotel : {
+		 * 	      items : [],
+		 * 	      mapsource : { place_id : marker }
+		 * 	  }
+		 * }
+		 */
+		MARKERS, 
 		map, 
 		encode, 
 		decode,
 		drivePath
 	] = [
-		{}, 
 		{}, 
 		null, 
 		encodeURIComponent, 
@@ -101,7 +108,7 @@ let publisher = new utils().makePublisher({
 		rich.forEach((v, i)=>{
 			makeMarkersAndInfoHandler.call(publisher, v);
 		});
-
+		// console.log(rich);
 		this.loading.hide();
 
 		traverse.call(publisher);
@@ -193,14 +200,25 @@ let publisher = new utils().makePublisher({
 		content = opts.content,
 		id = opts.id;
 
+		let mapsource, mapItems;
+		
+		MARKERS[type] = MARKERS[type] || {};
+
 		// 缓存该类型的标记 用于之后的清除
-		if(!CACHE[type]){
-			CACHE[type] = [];
+		if(!MARKERS[type]['mapsource']){
+			MARKERS[type]['mapsource'] = {};
 		}
 
-		// 若MARKERS[id]已经缓存过说明至少有一个同 place_id 的点已经存在
+		if(!MARKERS[type]['items']){
+			MARKERS[type]['items'] = [];
+		}
+
+		mapsource = MARKERS[type]['mapsource'];
+		mapItems = MARKERS[type]['items'];
+
+		// 若MARKERS[type][id]已经缓存过说明至少有一个同 place_id 的点已经存在
 		// 且经纬度完全一致
-		if(MARKERS[id] && latlngSource[id].lat() == opts.latlng.lat() && latlngSource[id].lng() == opts.latlng.lng()){
+		if(mapsource[id] && latlngSource[id].lat() == opts.latlng.lat() && latlngSource[id].lng() == opts.latlng.lng()){
 			// 追加 infowindow 内容
 			let html = `
 				<div class='info'>
@@ -210,11 +228,9 @@ let publisher = new utils().makePublisher({
 				</div>`;
 			let cont = infoSource[id].getContent() + html;
 			infoSource[id].setContent(cont);
-
 		}
 		else {
-			MARKERS[id] = marker;
-			CACHE[type].push(marker);
+			mapsource[id] = marker;
 
 			marker.setMap(map);
 			
@@ -236,15 +252,17 @@ let publisher = new utils().makePublisher({
 			});
 		}
 
+		mapItems.push(marker);
 		return marker;
 	},
 
 	// 清除标记
 	removeMarks : (type)=>{
-		CACHE[type].map((v, i)=>{
+		// 有些marer 在 MARKERS[type]['items']中但由于 key 的唯一性 MARKERS[type]['mapsource']中被合并
+		$.each(MARKERS[type]['items'], (i, v)=>{
 			v.setMap(null);
 		})
-		delete CACHE[type];
+		delete MARKERS[type];
 	},
 
 	// 加载状态
@@ -581,11 +599,11 @@ let publisher = new utils().makePublisher({
 		})
 		.on('mouseenter', '.lines', function(){
 			let id = $(this).data('id'), type = $(this).data('type');
-			MARKERS[id].setAnimation(google.maps.Animation.BOUNCE);
+			MARKERS[type]['mapsource'][id].setAnimation(google.maps.Animation.BOUNCE);
 		})
 		.on('mouseleave', '.lines', function(){
 			let id = $(this).data('id'), type = $(this).data('type');
-			MARKERS[id].setAnimation(null);
+			MARKERS[type]['mapsource'][id].setAnimation(null);
 		})
 	},
 
@@ -648,6 +666,7 @@ let publisher = new utils().makePublisher({
 							'lng' : _lng
 						},
 						(res)=>{
+							let mapsource = MARKERS[type]['mapsource'];
 							alert('坐标更新成功');
 							// 更新 DOM 节点属性
 							$hook.data({
@@ -657,9 +676,9 @@ let publisher = new utils().makePublisher({
 							$hook.attr('id', _place_id);
 							
 							// 更新 MARKERS
-							MARKERS[_place_id] = MARKERS[id];
+							mapsource[_place_id] = mapsource[id];
 							// 重新定位 marker
-							MARKERS[_place_id].setPosition({
+							mapsource[_place_id].setPosition({
 								lat : _lat,
 								lng : _lng
 							});
@@ -667,7 +686,7 @@ let publisher = new utils().makePublisher({
 							// 更新信息窗口
 							infoSource[_place_id] = infoSource[id];
 							// 重新定位 信息窗口
-							infoSource[_place_id].setMap(map, MARKERS[_place_id]);
+							infoSource[_place_id].setMap(map, mapsource[_place_id]);
 							
 							// 更新经纬度缓存
 							latlngSource[_place_id] = google.maps.LatLng(lat, lng);
@@ -689,7 +708,7 @@ let publisher = new utils().makePublisher({
 			e.preventDefault();
 			let $this = $(this), value = $this.prev().val(), $hook = $this.closest('.info').find('.route');
 			let {lat, lng, name, type, uid} = $hook.data(), id = $hook.attr('id');
-			let marker = MARKERS[id];
+			let marker = MARKERS[type]["mapsource"][id];
 
 			// 激活拖放
 			if(!$this.data('dragable') ){
