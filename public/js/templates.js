@@ -7,6 +7,10 @@ var formTemplate = `<form action="" class="panel hidden" id="panel">
 								<input type="checkbox" name="type[]" class="i-b">
 								<span class="i-b">米其林</span>
 							</label>
+							<label class='item fl' data-type='spot'>
+								<input type="checkbox" name="type[]" class="i-b">
+								<span class="i-b">景点</span>
+							</label>
 						</form>`;
 
 var loaderTemplate = `<div class="spinner">

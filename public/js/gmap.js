@@ -149,7 +149,7 @@ let publisher = new utils().makePublisher({
 					<form action="" class='none'>
 						<input type="text" id='adress' placeholder='谷歌地图地址' />
 						<button id='fix-btn'>这波头很硬</button>
-						<button class='drag-btn'>激活拖放纠正</button>
+						<button class='drag-btn disabled'>激活拖动纠正</button>
 					</form>
 					<div class='nearby none'>
 						<b>附近:</b> 
@@ -698,6 +698,7 @@ let publisher = new utils().makePublisher({
 				marker.setIcon(publisher.makeIcon(type, 0));
 				$this.html('用这个点更新数据');
 				$this.data('dragable', 1);
+				$this.removeClass('disabled');
 			}
 			// 关闭拖放提交数据
 			else {
@@ -710,6 +711,11 @@ let publisher = new utils().makePublisher({
 					`维度(老)${lat}`,
 					`是否更新？`
 				].join('\n');
+
+				if(lng == _lng && lat == _lat){
+					alert('新老坐标都一样更新个溜溜球');
+					return;
+				}
 
 				// 确认更新数据
 				if(confirm(message)){
@@ -737,6 +743,7 @@ let publisher = new utils().makePublisher({
 							marker.setCursor('pointer');
 							marker.setIcon(publisher.makeIcon(type, 1));
 							$this.html('激活拖放纠正');
+							$this.addClass('disabled');
 						}
 					);
 				}
@@ -752,7 +759,8 @@ let publisher = new utils().makePublisher({
 		let xAxis = {'0' : 30, '1' : 0}, 
 			yAxis = {
 				'hotel' : 190,
-				'cate' : 152
+				'cate' : 152,
+				'spot' : 114
 			};
 		return {
 			url : 'http://static.qyer.com/static/plan/new/project/web/plan/img/pin.png',
