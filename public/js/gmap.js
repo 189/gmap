@@ -6,6 +6,7 @@ import {formTemplate, loaderTemplate} from './templates';
 import 'jqueryui';
 
 // 加载 CSS 模块
+import 'animate-css';
 import 'layout-css';
 
 // 变量初始化
@@ -35,6 +36,8 @@ let [
 let mapBox = document.getElementById('map-wrap'), 
 	$mapBox = $(mapBox), 
 	$sider = $('#sidebar'),
+	$listWrap = $('#list-wrap'),
+	$lineWrap = $('#line-wrap'),
 	infoSource = {}, 	// 存储 place id 和信息窗口的对应关系 方便窗口管理如关闭
 	latlngSource = {}; 	// 存储 place id 和经纬度对象的对应关系 方便根据 place id 获取 经纬度
 
@@ -83,6 +86,7 @@ let publisher = new utils().makePublisher({
 				}
 				else {
 					publisher.removeMarks(type);
+					publisher.removeListPoint(type);
 				}
 			}
 		})
@@ -180,13 +184,15 @@ let publisher = new utils().makePublisher({
 				link : link
 			});
 			latlngSource[id] = latlng;
+
+			this.makeListPoint(v);
 		}
 
-		let bounds = new google.maps.LatLngBounds();
-		$.each(latlngSource, (i, v)=>{
-			bounds.extend(v);
-		})
-		map.fitBounds(bounds);
+		// let bounds = new google.maps.LatLngBounds();
+		// $.each(latlngSource, (i, v)=>{
+		// 	bounds.extend(v);
+		// })
+		// map.fitBounds(bounds);
 	},
 
 	// 根据经纬度 标记类型 标记窗口的文本 生成点标记
@@ -396,7 +402,7 @@ let publisher = new utils().makePublisher({
 
 						})
 
-						map.fitBounds(bounds);
+						// map.fitBounds(bounds);
 					}
 					publisher.loading.hide();
 
@@ -791,6 +797,63 @@ let publisher = new utils().makePublisher({
 		};
 	},
 
+	// 根据传入的请求类型 返回类型文本
+	getTypeText : (type)=>{
+		return {
+			'hotel' : '酒店',
+			'spot'  :  '景点',
+			'cate'  :  '米其林'
+		}[type];
+	},
+
+	// 生成列表
+	makeListPoint : function(v){
+		let html = '', $typeNode = $listWrap.find(`#${v.type}`), text = this.getTypeText(v.type);
+		if($typeNode.length){
+			$typeNode.find('ul').append(`<li data-id="${v.place_id}" data-type="${v.type}">${v.name}</li>`);
+		}
+		else {
+			$listWrap.append(`
+				<div class="items" id='${v.type}'>
+					<h4 class="t-c" data-show='1'>${text}</h4>
+					<ul>
+						<li data-id="${v.place_id}" data-type="${v.type}">${v.name}</li>
+					</ul>
+				</div>
+			`);
+		}
+	},
+
+	// 删除列表
+	removeListPoint : function(type){
+		$('#' + type).remove();
+	},
+
+	// 折叠列表
+	toggleListPoint : function(){
+		$listWrap.on('click', '.items h4', function(){
+			let $this = $(this), $pare = $this.parent();
+			if($this.data('show') == 1){
+				$pare.find('ul').hide();
+				$this.data('show', 0);
+			}
+			else {
+				$pare.find('ul').show();
+				$this.data('show', 1);
+			}
+		})
+		.on('click', '.items li', function(){
+			let $this = $(this), id = $this.data('id'), type = $this.data('type');
+			let bounds = new google.maps.LatLngBounds(), marker = MARKERS[type]['mapsource'][id];
+
+			marker.setAnimation(google.maps.Animation.DROP);
+			infoSource[id].open(map, marker);
+			bounds.extend(latlngSource[id]);
+			map.fitBounds(bounds);
+		})
+
+	},
+
 	// 工具函数 用来等分数组
 	devide : (haystack, piece)=>{
 		var max = parseInt(haystack.length / piece);
@@ -803,6 +866,6 @@ let publisher = new utils().makePublisher({
 		return ret;
 	}
 
-}, ['content', 'addToPanel', 'calculate', 'sideBarMannger', 'sortable', 'positionFix']);
+}, ['content', 'addToPanel', 'calculate', 'sideBarMannger', 'sortable', 'positionFix', 'toggleListPoint']);
 
 publisher.init();

@@ -43,6 +43,7 @@ module.exports = {
 			'utils' : path.join(js_path, 'utils'),
 			'jqueryui' : path.join(js_path, 'jquery-ui'),
 			'layout-css' : path.join(css_path, 'layout.css'),
+			'animate-css' : path.join(css_path, 'animate.min.css'),
 			'demo-css' : path.join(css_path, 'demo.scss')
 		}
 	},
