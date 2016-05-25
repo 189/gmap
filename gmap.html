@@ -6,36 +6,22 @@
 </head>
 <body>
 <div class="sidebar-box">
-	<div class="sidebar-wrap" id="list-wrap">
-		<h3>
-			<span class="i-b">列表信息</span>
-			<a href="javascript:;">切换至路程计算</a>
-		</h3>
-		<!-- <div class="items" id='hotel'>
-			<h4 class="t-c">餐厅</h4>
-			<ul>
-				<li>景点1</li>
-				<li>景点2</li>
-				<li>景点3</li>
-			</ul>
-		</div>
-		<div class="items">
-			<h4 class="t-c">餐厅</h4>
-			<ul>
-				<li>景点1</li>
-				<li>景点2</li>
-				<li>景点3</li>
-			</ul>
-		</div> -->
-	</div>
-	<div class="sidebar-wrap none" id="line-wrap">
+	<div class="sidebar-wrap" id="line-wrap">
 		<h3>
 			<button class="ui-btn ui-btn-danger" id="caculate-btn"> 计算路线 </button>
-			<a href="javascript:;" class="mt10">切换至列表</a>
+			<a href="javascript:;" class="mt10" id="show-list">显示文字列表</a>
 		</h3>
 		<div class="sidebar" id="sidebar"></div>
 	</div>
-	
+	<div class="sidebar-wrap list-wrap" id="list-wrap">
+		<h3>
+			<span class="i-b">列表信息</span>
+			<a href="javascript:;" id="hide-list">隐藏文字列表</a>
+		</h3>
+		<div class="list-content">
+			
+		</div>
+	</div>
 </div>
 <div class="map-wrap rel" id="map-wrap"></div>
 <script src="http://maps.google.cn/maps/api/js?v=3&key=AIzaSyC-Uhgr3qWW2W5IBHewyUTM-1d5_BwOl3A&language=zh-cn&region=JP&libraries=places"></script>

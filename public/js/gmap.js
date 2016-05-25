@@ -83,6 +83,9 @@ let publisher = new utils().makePublisher({
 						// 绘制点
 						this.paint(data, type);
 					}.bind(publisher));
+					
+					// 显示文字列表面板
+					$listWrap.addClass('active');
 				}
 				else {
 					publisher.removeMarks(type);
@@ -813,7 +816,7 @@ let publisher = new utils().makePublisher({
 			$typeNode.find('ul').append(`<li data-id="${v.place_id}" data-type="${v.type}">${v.name}</li>`);
 		}
 		else {
-			$listWrap.append(`
+			$listWrap.find('.list-content').append(`
 				<div class="items" id='${v.type}'>
 					<h4 class="t-c" data-show='1'>${text}</h4>
 					<ul>
@@ -824,6 +827,17 @@ let publisher = new utils().makePublisher({
 		}
 	},
 
+	// 文字列表显示-隐藏
+	listHandler : function(){
+		$('#show-list').on('click', ()=>{
+			$listWrap.addClass('active');
+		})
+
+		$('#hide-list').on('click', ()=>{
+			$listWrap.removeClass('active');
+		})
+	},
+
 	// 删除列表
 	removeListPoint : function(type){
 		$('#' + type).remove();
@@ -831,6 +845,7 @@ let publisher = new utils().makePublisher({
 
 	// 折叠列表
 	toggleListPoint : function(){
+		let oldInfo = null;
 		$listWrap.on('click', '.items h4', function(){
 			let $this = $(this), $pare = $this.parent();
 			if($this.data('show') == 1){
@@ -844,12 +859,17 @@ let publisher = new utils().makePublisher({
 		})
 		.on('click', '.items li', function(){
 			let $this = $(this), id = $this.data('id'), type = $this.data('type');
-			let bounds = new google.maps.LatLngBounds(), marker = MARKERS[type]['mapsource'][id];
+			let marker = MARKERS[type]['mapsource'][id];
 
+			$this.addClass('now').siblings().removeClass('now');
+			oldInfo && oldInfo.close();
 			marker.setAnimation(google.maps.Animation.DROP);
 			infoSource[id].open(map, marker);
-			bounds.extend(latlngSource[id]);
-			map.fitBounds(bounds);
+			// map.panToBounds(latlngSource[id]);
+			map.setCenter(latlngSource[id]);
+			map.setZoom(10);
+
+			oldInfo = infoSource[id];
 		})
 
 	},
@@ -866,6 +886,6 @@ let publisher = new utils().makePublisher({
 		return ret;
 	}
 
-}, ['content', 'addToPanel', 'calculate', 'sideBarMannger', 'sortable', 'positionFix', 'toggleListPoint']);
+}, ['content', 'addToPanel', 'calculate', 'sideBarMannger', 'sortable', 'positionFix', 'toggleListPoint', 'listHandler']);
 
 publisher.init();

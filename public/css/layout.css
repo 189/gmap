@@ -49,10 +49,11 @@ a,a:hover,a:visited { color: #000; text-decoration: underline;  }
 .sidebar-wrap { height: 100%; }
 .sidebar-wrap ul { margin-bottom: 10px; }
 .sidebar-wrap li { padding-left: 10px; height: 25px; line-height: 25px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; }
-.sidebar-wrap li:hover { background-color: #ccc; cursor: pointer; }
+.sidebar-wrap li:hover,
+.sidebar-wrap li.now { background-color: #ccc; cursor: pointer; }
 .sidebar-wrap h3 a { float: right; margin-right: 10px; font-size: 12px; }
 .sidebar-wrap .items { padding: 5px; background-color: #fff; border-radius: 3px; margin-bottom: 5px; box-shadow: 1px 1px 1px rgba(0, 0, 0, .2)  }
-.sidebar-wrap h4 { font-size: 14px; border-bottom: 1px dashed #ccc; padding: 5px 10px 8px; margin-bottom: 5px; }
+.list-wrap h4 { font-size: 14px; border-bottom: 1px dashed #ccc; padding: 5px 10px 8px; margin-bottom: 5px; }
 
 .panel { margin: 10px; width: auto; background:none; box-shadow: rgba(0, 0, 0, 0.298039) 0px 1px 4px -1px; background-color: rgb(255, 255, 255); background-clip: padding-box; border-radius: 2px; }
 .panel span { margin:0 2px; }
@@ -234,3 +235,36 @@ a,a:hover,a:visited { color: #000; text-decoration: underline;  }
         transform: scale(1.0);
     }
 }
+
+.list-wrap {
+    position: absolute;
+    top: 0;
+    z-index: 3;
+    right: 0;
+    width: 250px;
+    bottom: 0;
+    background-color: #eee;
+    
+    -webkit-transform : translate3d(240px, 0, 0);
+    -moz-transform : translate3d(240px, 0, 0);
+    -ms-transform : translate3d(240px, 0, 0);
+        transform : translate3d(240px, 0, 0);
+}
+
+.list-wrap.active { 
+    -webkit-transition: -webkit-transform .33s ease-in-out;
+    -moz-transition: -moz-transform .33s ease-in-out;
+    -ms-transition: -ms-transform .33s ease-in-out;
+        transition: transform .33s ease-in-out;
+    -webkit-transform : translate3d(0, 0, 0);
+    -moz-transform : translate3d(0, 0, 0);
+    -ms-transform : translate3d(0, 0, 0);
+        transform : translate3d(0, 0, 0);
+}
+
+.list-content { position: absolute; z-index: 10; top: 34px; bottom: 0; overflow: auto; width: 99%;  }
+
+
+
+
+
