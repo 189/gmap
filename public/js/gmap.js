@@ -874,7 +874,7 @@ let publisher = new utils().makePublisher({
 
 	// 折叠列表
 	toggleListPoint : function(){
-		let oldInfo = null;
+		let oldInfo = null, oldMarker;
 		// 展开/收起 侧栏分类
 		$listWrap.on('click', '.items h4', function(){
 			let $this = $(this), $pare = $this.parent();
@@ -892,14 +892,21 @@ let publisher = new utils().makePublisher({
 			let marker = MARKERS[type]['mapsource'][id];
 
 			$this.addClass('now').siblings().removeClass('now');
-			// oldInfo && oldInfo.close();
+			
+			// if(oldInfo){
+			// 	oldInfo.close();
+			// 	publisher.blurMarker(oldMarker);
+			// }
+
 			marker.setAnimation(google.maps.Animation.DROP);
+			publisher.focusMarker(marker);
 			infoSource[id].open(map, marker);
 			// map.panToBounds(latlngSource[id]);
 			map.setCenter(latlngSource[id]);
 			// map.setZoom(map.getZoom());
 
-			oldInfo = infoSource[id];
+			// oldInfo = infoSource[id];
+			// oldMarker = marker;
 		})
 
 	},
