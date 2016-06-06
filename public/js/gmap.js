@@ -339,6 +339,9 @@ let publisher = new utils().makePublisher({
 							</div>
 						</section>`;
 
+			// 切换右侧面板 显示路线面板
+			$listWrap.removeClass('active');
+
 			// 是否已添加过
 			if($sider.find(`.lines[data-id="${id}"]`).length){
 				return;
@@ -360,6 +363,7 @@ let publisher = new utils().makePublisher({
 			// $sider.append(html);
 
 			infoSource[id].close();
+			
 		})
 		// 查看附件
 		.on('click', '.nearby a', function(){

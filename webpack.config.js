@@ -51,11 +51,29 @@ module.exports = {
 	plugins : [
 		new ExtractTextPlugin("css/[name].css"),
 
+		// 提取公共模块
+	    new webpack.optimize.CommonsChunkPlugin({
+	   		name: "vendor",
+    		minChunks: 3
+    		// (with more entries, this ensures that no other module goes into the vendor chunk)
+	    }),
+
+	    // 自动构建 资源文件版本
 		new HtmlWebpackPlugin({
 	            filename: 'gmap.html',
 	            inject: 'body',
 	            template : 'gmap.html',
-	            chunks : ['gmap']
-	    })
+	            chunks : ['vendor', 'gmap']
+	    }),
+
+	    // 压缩
+    	new webpack.optimize.UglifyJsPlugin({
+            compress: {
+                warnings: false
+            },
+            mangle: {
+                except: ['$super', '$', 'exports', 'require']
+            }
+        })
 	]
 };
