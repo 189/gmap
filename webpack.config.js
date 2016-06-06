@@ -28,8 +28,8 @@ module.exports = {
 		},
 		{
 		    test: /\.css$/,
-		    // loader: ExtractTextPlugin.extract("style-loader", "css-loader")
-		    loader: "style!css"
+		    loader: ExtractTextPlugin.extract("style-loader", "css-loader")
+		    // loader: "style!css"
 		},
 		{
 			test : /\.scss$/,
@@ -49,6 +49,8 @@ module.exports = {
 	},
 
 	plugins : [
+		new ExtractTextPlugin("css/[name].css"),
+
 		new HtmlWebpackPlugin({
 	            filename: 'gmap.html',
 	            inject: 'body',

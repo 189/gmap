@@ -155,8 +155,9 @@ let publisher = new utils().makePublisher({
 			var _address = decode(address), latlng = new google.maps.LatLng(lat, lng);
 			var infoTemplate = `
 				<div class='info'>
-					<h3>${name}</h3>
-					<p>${address}</p>
+					<h3 class='tit'><span>${name}</span><span class="stars stars-${v.grade} i-b"></span></h3>`
+					+ (v.type === 'cate' ? `<p>类型：${v.ctype_name}</p><p>价格：${v.jp_prices}JPY</p>` : '') +`
+					<p>地址：${address}</p>
 					<a href="${link}" target="_blank">查看详情</a>
 					<a href='javascript:;' data-uid='${uid}' data-type='${type}' id='${id}' data-name='${name}' data-lng='${lng}' data-lat='${lat}' data-_address='${_address}' class="route">添加到行程</a>
 					<a href="javascript:;" class='bug-fix'>纠错</a>
@@ -177,6 +178,7 @@ let publisher = new utils().makePublisher({
 						<a href='javascript:;' data-type='airport'>机场</a>
 					</div>
 				</div>`;
+
 			this.makeMarks({
 				latlng : latlng, 
 				type : type, 
@@ -184,7 +186,10 @@ let publisher = new utils().makePublisher({
 				id : id,
 				name : name,
 				address : address,
-				link : link
+				link : link,
+				grade : v.grade,
+				jp_prices : v.jp_prices,
+				ctype_name : v.ctype_name
 			});
 			latlngSource[id] = latlng;
 
@@ -203,7 +208,8 @@ let publisher = new utils().makePublisher({
 		let marker = new google.maps.Marker({
 			position : opts.latlng,
 			animation: google.maps.Animation.DROP,
-			icon : opts.icon || publisher.makeIcon(opts.type, 1)
+			icon : opts.icon || publisher.makeIcon(opts.type, 1),
+			zIndex : 1
 		}),
 		type = opts.type, 
 		content = opts.content,
@@ -228,11 +234,13 @@ let publisher = new utils().makePublisher({
 		// 若MARKERS[type][id]已经缓存过说明至少有一个同 place_id 的点已经存在
 		// 且经纬度完全一致
 		if(mapsource[id] && latlngSource[id].lat() == opts.latlng.lat() && latlngSource[id].lng() == opts.latlng.lng()){
+			// console.log(id);
 			// 追加 infowindow 内容
 			let html = `
 				<div class='info'>
-					<h3>${opts.name}</h3>
-					<p>${opts.address}</p>
+					<h3 class='tit'><span>${opts.name}</span><span class="stars stars-${opts.grade} i-b"></span></h3>`
+					+ (opts.type === 'cate' ? `<p>类型：${opts.ctype_name}</p><p>价格：${opts.jp_prices}JPY</p>` : '') +`
+					<p>地址：${opts.address}</p>
 					<a href="${opts.link}" target="_blank">查看详情</a>
 				</div>`;
 			let cont = infoSource[id].getContent() + html;
@@ -244,20 +252,28 @@ let publisher = new utils().makePublisher({
 			marker.setMap(map);
 			
 			let infowindow = new google.maps.InfoWindow({
-			    content: content
+			    content: content,
+			    zIndex : 1
 			});
 
 			infoSource[id] = infowindow;
+
+			// 自定义一个 type 属性 标记当前标记的类型 如酒店、米其林等
+			marker._type = opts.type;
 
 			// infowindow.open(map, marker);
 			marker.addListener('click', function(){
 				if(this.isShow == 1){
 					infowindow.close();
+					infowindow.setZIndex(1);
 					this.isShow = 0;
+			    	publisher.blurMarker(marker);
 					return;
 				}
 			    infowindow.open(map, marker);
+				infowindow.setZIndex(30);
 			    this.isShow = 1;
+			    publisher.focusMarker(marker);
 			});
 		}
 
@@ -272,6 +288,18 @@ let publisher = new utils().makePublisher({
 			v.setMap(null);
 		})
 		delete MARKERS[type];
+	},
+
+	// 高亮标记
+	focusMarker : (marker)=>{
+		marker.setIcon(publisher.makeIcon(marker._type, 2));
+		marker.setZIndex(30);
+	},
+
+	// 标记失焦点
+	blurMarker : (marker)=>{
+		marker.setIcon(publisher.makeIcon(marker._type, 1));
+		marker.setZIndex(1);
 	},
 
 	// 加载状态
@@ -782,9 +810,9 @@ let publisher = new utils().makePublisher({
 
 	// icon 生成器 返回对应类型的 icon 配置
 	// type 类型 
-	// status 状态  1 选中状态 0 默认状态
+	// status 状态  1 选中状态 0 默认状态 2 高亮状态
 	makeIcon : (type, status)=>{
-		let xAxis = {'0' : 30, '1' : 0}, 
+		let xAxis = {'0' : 30, '1' : 0, '2' : 60}, 
 			yAxis = {
 				'hotel' : 190,
 				'cate' : 152,
@@ -799,6 +827,7 @@ let publisher = new utils().makePublisher({
 			}
 		};
 	},
+
 
 	// 根据传入的请求类型 返回类型文本
 	getTypeText : (type)=>{
@@ -846,6 +875,7 @@ let publisher = new utils().makePublisher({
 	// 折叠列表
 	toggleListPoint : function(){
 		let oldInfo = null;
+		// 展开/收起 侧栏分类
 		$listWrap.on('click', '.items h4', function(){
 			let $this = $(this), $pare = $this.parent();
 			if($this.data('show') == 1){
@@ -862,12 +892,12 @@ let publisher = new utils().makePublisher({
 			let marker = MARKERS[type]['mapsource'][id];
 
 			$this.addClass('now').siblings().removeClass('now');
-			oldInfo && oldInfo.close();
+			// oldInfo && oldInfo.close();
 			marker.setAnimation(google.maps.Animation.DROP);
 			infoSource[id].open(map, marker);
 			// map.panToBounds(latlngSource[id]);
 			map.setCenter(latlngSource[id]);
-			map.setZoom(10);
+			// map.setZoom(map.getZoom());
 
 			oldInfo = infoSource[id];
 		})
